@@ -155,7 +155,7 @@ void usage_fprint(
 	fprintf( stream, "\t-e: specify the examiner name (default is examiner_name).\n" );
 	fprintf( stream, "\t-E: specify the evidence number (default is evidence_number).\n" );
 	fprintf( stream, "\t-f: specify the EWF file format to write to, options: ftk, encase2,\n"
-	                 "\t    encase3, encase4, encase5, encase6 (default), encase7, linen5,\n"
+	                 "\t    encase3, encase4, encase5, encase6 (default), encase7, encase7-v2,\n"
 	                 "\t    linen6, linen7, ewfx\n" );
 	fprintf( stream, "\t-h: shows this help\n" );
 	fprintf( stream, "\t-j: the number of concurrent processing jobs (threads), where\n"

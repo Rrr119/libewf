@@ -1,0 +1,17 @@
+{
+  "root": "/home/dev/feedback/uid19891",
+  "B": "/home/dev/feedback/uid19891",
+  "sha": "b6f8123f6b4262ff5a224df4705cb28af16f7679",
+  "wslDistro": "Ubuntu-26.04",
+  "source": {
+    "owner": "libyal",
+    "repo": "libewf",
+    "sha": "b6f8123f6b4262ff5a224df4705cb28af16f7679"
+  },
+  "fork": {
+    "owner": "Rrr119",
+    "repo": "libewf",
+    "cloneUrl": "https://github.com/Rrr119/libewf.git"
+  },
+  "at": "2026-11-15T04:06:22.807Z"
+}

@@ -84,6 +84,22 @@ The following version of programs were used to test the information within this 
 
 * EnCase 7.04 (Windows)
 
+=== libewf write support
+
+libewf writes EWF2-Ex01 version 2.1 files. The writer creates the segment
+file header, device information, case data, sector data, sector table, hash and
+next or done sections. Chunks are stored 16-byte aligned. Uncompressed chunks
+include an Adler-32 checksum in the sector data and set the CHECKSUMED flag in
+the corresponding sector table entry.
+
+Supported chunk storage options are no compression, deflate compression,
+empty-block compression and 64-bit pattern fill. Multiple segment files and
+streamed writes, where the media size is not known in advance, are supported.
+Files written by libewf can be read and verified with ewfverify.
+
+Encryption and bzip2 compression are currently not supported when writing
+EWF2-Ex01.
+
 ==  Segment files
 
 EWF2 stores data in one or more segment files (or segments). Each segment file consists of:

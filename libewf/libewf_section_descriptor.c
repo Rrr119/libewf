@@ -1180,7 +1180,7 @@ int libewf_section_descriptor_write_data(
 		 ( (ewf_section_descriptor_v2_t *) data )->data_flags,
 		 section_descriptor->data_flags );
 
-		byte_stream_copy_from_uint32_little_endian(
+		byte_stream_copy_from_uint64_little_endian(
 		 ( (ewf_section_descriptor_v2_t *) data )->data_size,
 		 section_descriptor->data_size );
 

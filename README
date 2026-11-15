@@ -12,9 +12,17 @@ Read or write supported EWF formats:
   * .E01 (EWF-E01)
   * .Ex01 (EWF2-Ex01)
 
+EWF2-Ex01 write support includes:
+
+* file headers, section data and sector table sections
+* uncompressed chunks with Adler-32 checksums
+* deflate compression, empty-block compression and pattern fill
+* multiple segment files and streamed writes
+* verification with ewfverify
+
 Not supported:
 
-* .Ex01 (EWF2-Ex01) bzip2 compression (work in progress)
+* .Ex01 (EWF2-Ex01) bzip2 compression
 * .Ex01 (EWF2-Ex01) encryption
 
 Read-only supported EWF formats:
@@ -33,7 +41,6 @@ Work in progress:
 
 * Dokan library support (experimental)
 * Python bindings (including Python 3 support)
-* write EWF2-Ex01 support
 * Multi-threading support
 
 Planned:

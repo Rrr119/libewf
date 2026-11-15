@@ -36,6 +36,7 @@
 #include "ewf_test_memory.h"
 #include "ewf_test_unused.h"
 
+#include "../libewf/ewf_section.h"
 #include "../libewf/libewf_section_descriptor.h"
 
 uint8_t ewf_test_section_descriptor_data1[ 76 ] = {
@@ -1054,6 +1055,7 @@ int ewf_test_section_descriptor_write_data(
 
 	libcerror_error_t *error                        = NULL;
 	libewf_section_descriptor_t *section_descriptor = NULL;
+	uint64_t value_64bit                            = 0;
 	int result                                      = 0;
 
 	/* Initialize test
@@ -1092,6 +1094,37 @@ int ewf_test_section_descriptor_write_data(
 	EWF_TEST_ASSERT_IS_NULL(
 	 "error",
 	 error );
+
+	section_descriptor->type         = 0x00000003UL;
+	section_descriptor->data_flags   = 0;
+	section_descriptor->start_offset = 0x100001000ULL;
+	section_descriptor->data_size    = (size64_t) UINT32_MAX + 2;
+	section_descriptor->padding_size = 12;
+
+	result = libewf_section_descriptor_write_data(
+	          section_descriptor,
+	          section_descriptor_data,
+	          64,
+	          2,
+	          &error );
+
+	EWF_TEST_ASSERT_EQUAL_INT(
+	 "result",
+	 result,
+	 1 );
+
+	EWF_TEST_ASSERT_IS_NULL(
+	 "error",
+	 error );
+
+	byte_stream_copy_to_uint64_little_endian(
+	 ( (ewf_section_descriptor_v2_t *) section_descriptor_data )->data_size,
+	 value_64bit );
+
+	EWF_TEST_ASSERT_EQUAL_UINT64(
+	 "value_64bit",
+	 value_64bit,
+	 (uint64_t) UINT32_MAX + 2 );
 
 	/* Test error cases
 	 */

@@ -550,6 +550,39 @@ m4_define([AT_SETUP],
 
 SETUP_HELPER_FUNCTIONS
 
+AT_SETUP([EWF2 Ex01 write with compression, checksums and segments])
+
+AT_SKIP_IF(
+  [test -n "${SKIP_TOOLS_TESTS}" || test -n "${SKIP_TOOLS_END_TO_END_TESTS}"])
+
+AT_CHECK([
+  awk 'BEGIN { for (i = 0; i < 131072; i++) printf "0123456789abcdef"; }' > ewf2-input.raw
+
+  for compression_level in none fast best; do
+    ath_fn_run_ewftools_binary ewfacquire -q -u -fencase7-v2 -cdeflate:$compression_level -mremovable -S1MiB -tewf2-$compression_level ewf2-input.raw > /dev/null || exit $?
+    ath_fn_run_ewftools_binary ewfverify -q ewf2-$compression_level.Ex01 > /dev/null || exit $?
+  done
+
+  ath_fn_run_ewftools_binary ewfacquire -q -u -x -fencase7-v2 -cdeflate:best -mremovable -S1MiB -tewf2-data-chunks ewf2-input.raw > /dev/null
+  ath_fn_run_ewftools_binary ewfverify -q ewf2-data-chunks.Ex01 > /dev/null
+])
+
+AT_CLEANUP
+
+AT_SETUP([EWF2 Ex01 streaming write with unknown media size])
+
+AT_SKIP_IF(
+  [test -n "${SKIP_TOOLS_TESTS}" || test -n "${SKIP_TOOLS_END_TO_END_TESTS}"])
+
+AT_CHECK([
+  awk 'BEGIN { for (i = 0; i < 65536; i++) printf "0123456789abcdef"; }' > ewf2-stream-input.raw
+
+  ath_fn_run_ewftools_binary ewfacquirestream -q -fencase7-v2 -cdeflate:best -mremovable -S1MiB -tewf2-stream < ewf2-stream-input.raw > /dev/null
+  ath_fn_run_ewftools_binary ewfverify -q ewf2-stream.Ex01 > /dev/null
+])
+
+AT_CLEANUP
+
 m4_if(
   [HAVE_MULTI_THREAD_SUPPORT],
   [1],

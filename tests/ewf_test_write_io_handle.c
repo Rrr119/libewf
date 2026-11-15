@@ -1193,6 +1193,30 @@ int ewf_test_write_io_handle_calculate_chunks_per_segment_file(
 	 "error",
 	 error );
 
+	write_io_handle->remaining_segment_file_size = 1024 * 1024;
+	media_values->chunk_size                     = 32 * 1024;
+
+	result = libewf_write_io_handle_calculate_chunks_per_segment_file(
+	          write_io_handle,
+	          media_values,
+	          LIBEWF_SEGMENT_FILE_TYPE_EWF2,
+	          LIBEWF_FORMAT_V2_ENCASE7,
+	          &error );
+
+	EWF_TEST_ASSERT_EQUAL_INT(
+	 "result",
+	 result,
+	 1 );
+
+	EWF_TEST_ASSERT_EQUAL_UINT64(
+	 "write_io_handle->chunks_per_segment_file",
+	 write_io_handle->chunks_per_segment_file,
+	 (uint64_t) 31 );
+
+	EWF_TEST_ASSERT_IS_NULL(
+	 "error",
+	 error );
+
 	/* Test error cases
 	 */
 	result = libewf_write_io_handle_calculate_chunks_per_segment_file(
@@ -1528,6 +1552,43 @@ int ewf_test_write_io_handle_test_segment_file_full(
 	 "error",
 	 error );
 
+	media_values->chunk_size                     = 32 * 1024;
+	write_io_handle->remaining_segment_file_size = ( 32 * 1024 ) + 15;
+
+	result = libewf_write_io_handle_test_segment_file_full(
+	          write_io_handle,
+	          media_values,
+	          LIBEWF_SEGMENT_FILE_TYPE_EWF2,
+	          LIBEWF_FORMAT_V2_ENCASE7,
+	          &error );
+
+	EWF_TEST_ASSERT_EQUAL_INT(
+	 "result",
+	 result,
+	 1 );
+
+	EWF_TEST_ASSERT_IS_NULL(
+	 "error",
+	 error );
+
+	write_io_handle->remaining_segment_file_size = ( 32 * 1024 ) + 16;
+
+	result = libewf_write_io_handle_test_segment_file_full(
+	          write_io_handle,
+	          media_values,
+	          LIBEWF_SEGMENT_FILE_TYPE_EWF2,
+	          LIBEWF_FORMAT_V2_ENCASE7,
+	          &error );
+
+	EWF_TEST_ASSERT_EQUAL_INT(
+	 "result",
+	 result,
+	 0 );
+
+	EWF_TEST_ASSERT_IS_NULL(
+	 "error",
+	 error );
+
 	/* Test error cases
 	 */
 	result = libewf_write_io_handle_test_segment_file_full(
@@ -1709,6 +1770,46 @@ int ewf_test_write_io_handle_test_chunks_section_full(
 	          0,
 	          LIBEWF_SEGMENT_FILE_TYPE_EWF1,
 	          LIBEWF_FORMAT_ENCASE7,
+	          &error );
+
+	EWF_TEST_ASSERT_EQUAL_INT(
+	 "result",
+	 result,
+	 0 );
+
+	EWF_TEST_ASSERT_IS_NULL(
+	 "error",
+	 error );
+
+	media_values->chunk_size                     = 32 * 1024;
+	write_io_handle->chunks_section_offset       = 1024;
+	write_io_handle->remaining_segment_file_size = ( 32 * 1024 ) + 15;
+
+	result = libewf_write_io_handle_test_chunks_section_full(
+	          write_io_handle,
+	          media_values,
+	          1024,
+	          LIBEWF_SEGMENT_FILE_TYPE_EWF2,
+	          LIBEWF_FORMAT_V2_ENCASE7,
+	          &error );
+
+	EWF_TEST_ASSERT_EQUAL_INT(
+	 "result",
+	 result,
+	 1 );
+
+	EWF_TEST_ASSERT_IS_NULL(
+	 "error",
+	 error );
+
+	write_io_handle->remaining_segment_file_size = ( 32 * 1024 ) + 16;
+
+	result = libewf_write_io_handle_test_chunks_section_full(
+	          write_io_handle,
+	          media_values,
+	          1024,
+	          LIBEWF_SEGMENT_FILE_TYPE_EWF2,
+	          LIBEWF_FORMAT_V2_ENCASE7,
 	          &error );
 
 	EWF_TEST_ASSERT_EQUAL_INT(

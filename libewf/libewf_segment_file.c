@@ -3534,6 +3534,15 @@ ssize_t libewf_segment_file_write_chunks_section_start(
 
 		return( -1 );
 	}
+	/* EWF2 sector data has no leading section data or descriptor.
+	 * Its descriptor is written after the chunks by
+	 * libewf_segment_file_write_chunks_section_end().
+	 */
+	if( ( segment_file->type == LIBEWF_SEGMENT_FILE_TYPE_EWF2 )
+	 || ( segment_file->type == LIBEWF_SEGMENT_FILE_TYPE_EWF2_LOGICAL ) )
+	{
+		return( 0 );
+	}
 	if( ( segment_file->type != LIBEWF_SEGMENT_FILE_TYPE_EWF1 )
 	 && ( segment_file->type != LIBEWF_SEGMENT_FILE_TYPE_EWF1_LOGICAL )
 	 && ( segment_file->type != LIBEWF_SEGMENT_FILE_TYPE_EWF1_SMART ) )

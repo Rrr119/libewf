@@ -622,7 +622,8 @@ int libewf_write_io_handle_initialize_values(
 	{
 		write_io_handle->pack_flags |= LIBEWF_PACK_FLAG_ADD_ALIGNMENT_PADDING;
 	}
-	if( io_handle->format == LIBEWF_FORMAT_V2_ENCASE7 )
+	if( ( io_handle->format == LIBEWF_FORMAT_V2_ENCASE7 )
+	 || ( io_handle->format == LIBEWF_FORMAT_V2_LOGICAL_ENCASE7 ) )
 	{
 		write_io_handle->section_descriptor_size = sizeof( ewf_section_descriptor_v2_t );
 		write_io_handle->table_header_size       = sizeof( ewf_table_header_v2_t );
@@ -675,9 +676,12 @@ int libewf_write_io_handle_initialize_values(
 		 */
 		write_io_handle->chunk_table_entries_reserved_size = sizeof( ewf_table_entry_v2_t );
 
-		/* Leave space for the sector data and sector table section descriptor and the sector table footer
+		/* Leave space for the sector data and sector table section descriptors,
+		 * the sector table header and the sector table footer
 		 */
-		write_io_handle->chunks_section_reserved_size = sizeof( ewf_section_descriptor_v2_t ) + 16;
+		write_io_handle->chunks_section_reserved_size = ( 2 * sizeof( ewf_section_descriptor_v2_t ) )
+		                                              + sizeof( ewf_table_header_v2_t )
+		                                              + 16;
 	}
 	/* If no input write size was provided check if EWF file format allows for streaming
 	 */
@@ -1832,9 +1836,12 @@ int libewf_write_io_handle_calculate_chunks_per_segment_file(
 {
 	static char *function                      = "libewf_write_io_handle_calculate_chunks_per_segment_file";
 	int64_t calculated_chunks_per_segment_file = 0;
+	int64_t maximum_chunk_storage_size         = 0;
 	int64_t maximum_chunks_per_segment_file    = 0;
 	int64_t remaining_number_of_chunks         = 0;
 	int64_t required_chunk_sections            = 0;
+	int64_t section_overhead                   = 0;
+	uint8_t is_ewf2                            = 0;
 
 	if( write_io_handle == NULL )
 	{
@@ -1880,6 +1887,11 @@ int libewf_write_io_handle_calculate_chunks_per_segment_file(
 
 		return( -1 );
 	}
+	if( ( segment_file_type == LIBEWF_SEGMENT_FILE_TYPE_EWF2 )
+	 || ( segment_file_type == LIBEWF_SEGMENT_FILE_TYPE_EWF2_LOGICAL ) )
+	{
+		is_ewf2 = 1;
+	}
 /* TODO check if media values -> number of chunks is in bounds */
 	/* Calculate the maximum number of chunks within this segment file
 	 */
@@ -1891,14 +1903,38 @@ int libewf_write_io_handle_calculate_chunks_per_segment_file(
 		 */
 		maximum_chunks_per_segment_file /= media_values->chunk_size + 16;
 	}
+	else if( is_ewf2 != 0 )
+	{
+		/* EWF2 chunks contain an Adler-32 checksum and are padded to
+		 * the next 16-byte boundary
+		 */
+		maximum_chunk_storage_size = ( media_values->chunk_size + 4 + 15 ) / 16;
+		maximum_chunk_storage_size *= 16;
+
+		maximum_chunks_per_segment_file /= maximum_chunk_storage_size;
+	}
 	else
 	{
 		maximum_chunks_per_segment_file /= media_values->chunk_size + 4;
 	}
 	/* Determine the number of required chunk sections
 	 */
-	required_chunk_sections = maximum_chunks_per_segment_file
-	                        % write_io_handle->maximum_chunks_per_section;
+	if( is_ewf2 != 0 )
+	{
+		required_chunk_sections = maximum_chunks_per_segment_file
+		                        / write_io_handle->maximum_chunks_per_section;
+
+		if( ( maximum_chunks_per_segment_file
+		    % write_io_handle->maximum_chunks_per_section ) != 0 )
+		{
+			required_chunk_sections += 1;
+		}
+	}
+	else
+	{
+		required_chunk_sections = maximum_chunks_per_segment_file
+		                        % write_io_handle->maximum_chunks_per_section;
+	}
 
 	calculated_chunks_per_segment_file = write_io_handle->remaining_segment_file_size;
 
@@ -1941,7 +1977,17 @@ int libewf_write_io_handle_calculate_chunks_per_segment_file(
 	}
 	else
 	{
-/* TODO EWF2 */
+		section_overhead = ( 2 * write_io_handle->section_descriptor_size )
+		                 + write_io_handle->table_header_size
+		                 + 16;
+
+		calculated_chunks_per_segment_file -= required_chunk_sections * section_overhead;
+		calculated_chunks_per_segment_file -= maximum_chunks_per_segment_file * write_io_handle->table_entry_size;
+
+		if( calculated_chunks_per_segment_file < 0 )
+		{
+			calculated_chunks_per_segment_file = 0;
+		}
 	}
 	/* Calculate the number of chunks within this segment file
 	 */
@@ -1961,7 +2007,7 @@ int libewf_write_io_handle_calculate_chunks_per_segment_file(
 	}
 	else
 	{
-/* TODO EWF2 */
+		calculated_chunks_per_segment_file /= maximum_chunk_storage_size;
 	}
 	/* If the input size is known determine the remaining number of chunks
 	 */
@@ -2069,7 +2115,8 @@ int libewf_write_io_handle_test_segment_file_full(
      uint8_t format,
      libcerror_error_t **error )
 {
-	static char *function = "libewf_write_io_handle_test_segment_file_full";
+	static char *function              = "libewf_write_io_handle_test_segment_file_full";
+	int64_t maximum_chunk_storage_size = 0;
 
 	if( write_io_handle == NULL )
 	{
@@ -2153,20 +2200,31 @@ int libewf_write_io_handle_test_segment_file_full(
 			return( 1 );
 		}
 	}
-	/* Determine if a chunk would fit in the segment file
-	 */
-	else if( write_io_handle->remaining_segment_file_size < (ssize64_t) ( media_values->chunk_size + 4 ) )
+	else
 	{
-#if defined( HAVE_DEBUG_OUTPUT )
-		if( libcnotify_verbose != 0 )
+		maximum_chunk_storage_size = media_values->chunk_size + 4;
+
+		if( ( segment_file_type == LIBEWF_SEGMENT_FILE_TYPE_EWF2 )
+		 || ( segment_file_type == LIBEWF_SEGMENT_FILE_TYPE_EWF2_LOGICAL ) )
 		{
-			libcnotify_printf(
-			 "%s: no space left for additional chunk - file size exceeded.\n",
-			 function );
+			maximum_chunk_storage_size = ( maximum_chunk_storage_size + 15 ) / 16;
+			maximum_chunk_storage_size *= 16;
 		}
+		/* Determine if a chunk would fit in the segment file
+		 */
+		if( write_io_handle->remaining_segment_file_size < maximum_chunk_storage_size )
+		{
+#if defined( HAVE_DEBUG_OUTPUT )
+			if( libcnotify_verbose != 0 )
+			{
+				libcnotify_printf(
+				 "%s: no space left for additional chunk - file size exceeded.\n",
+				 function );
+			}
 #endif
 
-		return( 1 );
+			return( 1 );
+		}
 	}
 #if defined( HAVE_DEBUG_OUTPUT )
 	if( libcnotify_verbose != 0 )
@@ -2191,7 +2249,8 @@ int libewf_write_io_handle_test_chunks_section_full(
      uint8_t format,
      libcerror_error_t **error )
 {
-	static char *function = "libewf_write_io_handle_test_chunks_section_full";
+	static char *function              = "libewf_write_io_handle_test_chunks_section_full";
+	int64_t maximum_chunk_storage_size = 0;
 
 	if( write_io_handle == NULL )
 	{
@@ -2350,19 +2409,30 @@ int libewf_write_io_handle_test_chunks_section_full(
 			return( 1 );
 		}
 	}
-	/* Determine if a chunk would fit in the segment file
-	 */
-	else if( write_io_handle->remaining_segment_file_size < (ssize64_t) ( media_values->chunk_size + 4 ) )
+	else
 	{
-#if defined( HAVE_DEBUG_OUTPUT )
-		if( libcnotify_verbose != 0 )
+		maximum_chunk_storage_size = media_values->chunk_size + 4;
+
+		if( ( segment_file_type == LIBEWF_SEGMENT_FILE_TYPE_EWF2 )
+		 || ( segment_file_type == LIBEWF_SEGMENT_FILE_TYPE_EWF2_LOGICAL ) )
 		{
-			libcnotify_printf(
-		 	"%s: no space left for additional chunk - file size exceeded.\n",
-			 function );
+			maximum_chunk_storage_size = ( maximum_chunk_storage_size + 15 ) / 16;
+			maximum_chunk_storage_size *= 16;
 		}
+		/* Determine if a chunk would fit in the segment file
+		 */
+		if( write_io_handle->remaining_segment_file_size < maximum_chunk_storage_size )
+		{
+#if defined( HAVE_DEBUG_OUTPUT )
+			if( libcnotify_verbose != 0 )
+			{
+				libcnotify_printf(
+				 "%s: no space left for additional chunk - file size exceeded.\n",
+				 function );
+			}
 #endif
-		return( 1 );
+			return( 1 );
+		}
 	}
 #if defined( HAVE_DEBUG_OUTPUT )
 	if( libcnotify_verbose != 0 )
